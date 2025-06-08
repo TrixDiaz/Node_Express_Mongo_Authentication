@@ -6,6 +6,7 @@ import {PORT} from "./config/env.js";
 import userRouter from "./routes/user.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import arcjetMiddleware from "./middlewares/arcjet.middleware.js";
+import errorMiddleware from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.use(arcjetMiddleware);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
+
+app.use(errorMiddleware);
 
 app.get('/', (res) => {
    res.send('Hello, World! Welcome to the Server from Node and Express!');
