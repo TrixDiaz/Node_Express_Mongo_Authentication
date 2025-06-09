@@ -2,7 +2,7 @@ import aj from "../config/arcjet.js";
 
 const arcjetMiddleware = async (req, res, next) => {
     try {
-        const decision = await aj.protect(req, { requested: 3 }); // Adjust requested value based on your needs maximum is 15
+        const decision = await aj.protect(req, { requested: 5 }); // Adjust requested value based on your needs maximum is 15
 
         if (decision.isDenied()) {
             if (decision.reason.isRateLimit()) {
