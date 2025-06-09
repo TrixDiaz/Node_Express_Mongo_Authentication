@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
     isLocked: {
         type: Boolean,
         default: false,

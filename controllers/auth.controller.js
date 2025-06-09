@@ -59,6 +59,7 @@ export const signUp = async (req, res, next) => {
         next(error);
     }
 };
+
 export const signIn = async (req, res, next) => {
     try {
         const {email, password} = req.body;
@@ -72,13 +73,41 @@ export const signIn = async (req, res, next) => {
             return next(error);
         }
 
+        // Check if account is locked
+        if (user.isLocked) {
+            const error = new Error("Account is locked. Please contact administrator");
+            error.statusCode = 403;
+            return next(error);
+        }
+
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-            const error = new Error("Invalid password");
+            // Increment login attempts
+            user.loginAttempts = (user.loginAttempts || 0) + 1;
+
+            // Check if attempts exceed limit
+            if (user.loginAttempts >= 3) {
+                user.isLocked = true;
+                await user.save();
+                const error = new Error("Account locked due to multiple failed attempts. Please contact administrator");
+                error.statusCode = 403;
+                return next(error);
+            }
+
+            // Save the incremented attempts
+            await user.save();
+
+            const error = new Error(`Invalid password. ${3 - user.loginAttempts} attempts remaining`);
             error.statusCode = 401;
             return next(error);
+        }
+
+        // Reset login attempts on successful login
+        if (user.loginAttempts > 0) {
+            user.loginAttempts = 0;
+            await user.save();
         }
 
         // Generate JWT token
@@ -172,8 +201,8 @@ export const forgotPassword = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
     try {
-        const { token } = req.params;
-        const { password } = req.body;
+        const {token} = req.params;
+        const {password} = req.body;
 
         if (!token || !password) {
             const error = new Error("Token and password are required");
@@ -204,8 +233,10 @@ export const resetPassword = async (req, res, next) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Update user password
+        // Update user password and unlock account if locked
         user.password = hashedPassword;
+        user.loginAttempts = 0;
+        user.isLocked = false;
         await user.save();
 
         res.status(200).json({

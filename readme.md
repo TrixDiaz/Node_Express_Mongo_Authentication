@@ -216,7 +216,7 @@ Authorization: Bearer jwt_token_here
 - HttpOnly cookies for web applications
 
 ### Rate Limiting
-- Request attempts: 5 attempts per 10 seconds
+- Request attempts: 5 attempts per 30 seconds
 
 ### Input Validation
 - Email format validation

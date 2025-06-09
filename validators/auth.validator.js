@@ -25,6 +25,24 @@ export const signUpValidator = [
         }),
 ];
 
+export const signInValidator = [
+    body('email')
+        .notEmpty()
+        .isEmail()
+        .withMessage('Valid email is required'),
+
+    body('password')
+        .notEmpty()
+        .withMessage('Password is required'),
+];
+
+export const forgotPasswordValidator = [
+    body('email')
+        .notEmpty()
+        .isEmail()
+        .withMessage('Valid email is required'),
+];
+
 export const resetPasswordValidator = [
     body('password')
         .notEmpty()
