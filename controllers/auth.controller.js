@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {JWT_SECRET, JWT_EXPIRES_IN} from "../config/env.js";
 import transporter from "../config/nodemailer.js";
+import LoginLogs from "../models/login-logs.model.js";
 
 export const signUp = async (req, res, next) => {
     try {
@@ -41,17 +42,35 @@ export const signUp = async (req, res, next) => {
             name: name,
             email: email,
             password: hashedPassword,
+            isVerified: false
         });
 
-        const token = jwt.sign({userId: newUser._id}, JWT_SECRET, {
+        // Generate JWT token
+        const verificationToken = jwt.sign({userId: newUser._id}, JWT_SECRET, {
             expiresIn: JWT_EXPIRES_IN,
         });
+
+        // Create verification URL
+        const verificationURL = `http://yourfrontend.com/verify-email/${verificationToken}`;
+
+        // Send verification email
+        const mailOptions = {
+            from: 'noreply@noreply.com',
+            to: email,
+            subject: 'Email Verification',
+            text: `Hello ${name},\n\n`
+                + `Please verify your email by clicking the link:\n`
+                + `${verificationURL}\n\n`
+                + `This link will expire in 24 hours.\n`
+        };
+
+        await transporter.sendMail(mailOptions);
 
         res.status(201).json({
             success: true,
             message: "User created successfully",
             data: {
-                token,
+                verificationToken,
                 user: newUser,
             },
         });
@@ -67,9 +86,29 @@ export const signIn = async (req, res, next) => {
         // Find user by email
         const user = await User.findOne({email: email});
 
+        const createLoginLog = async (status, reason = null) => {
+            await LoginLogs.create({
+                userId: user?._id || null,
+                name: user?.name || null,
+                email,
+                status,
+                ipAddress: typeof ipAddress !== 'undefined' ? ipAddress : null,
+                userAgent: typeof userAgent !== 'undefined' ? userAgent : null,
+                reason
+            });
+        };
+
+
         if (!user) {
             const error = new Error("User not found");
             error.statusCode = 404;
+            return next(error);
+        }
+
+        // Check if email is verified
+        if (!user.isVerified) {
+            const error = new Error("Please verify your email before signing in");
+            error.statusCode = 403;
             return next(error);
         }
 
@@ -98,7 +137,7 @@ export const signIn = async (req, res, next) => {
 
             // Save the incremented attempts
             await user.save();
-
+            await createLoginLog('failed', 'Invalid password');
             const error = new Error(`Invalid password. ${5  - user.loginAttempts} attempts remaining`);
             error.statusCode = 401;
             return next(error);
@@ -114,6 +153,8 @@ export const signIn = async (req, res, next) => {
         const token = jwt.sign({userId: user._id}, JWT_SECRET, {
             expiresIn: JWT_EXPIRES_IN,
         });
+
+        await createLoginLog('success');
 
         res.status(200).json({
             success: true,
@@ -242,6 +283,48 @@ export const resetPassword = async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: "Password reset successful"
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const verifyEmail = async (req, res, next) => {
+    try {
+        const {token} = req.params;
+
+        // Verify token
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, JWT_SECRET);
+        } catch (error) {
+            error.message = "Invalid or expired verification token";
+            error.statusCode = 401;
+            return next(error);
+        }
+
+        // Find and update user
+        const user = await User.findById(decodedToken.userId);
+        if (!user) {
+            const error = new Error("User not found");
+            error.statusCode = 404;
+            return next(error);
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "Email already verified"
+            });
+        }
+
+        // Update verification status
+        user.isVerified = true;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Email verified successfully"
         });
     } catch (error) {
         next(error);
