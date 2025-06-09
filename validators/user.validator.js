@@ -25,6 +25,15 @@ export const updateUserValidator = [
 export const updateUserPasswordValidator = [
     ...validateUserId,
     body("password")
+        .notEmpty()
         .isLength({ min: 6 })
         .withMessage("Password must be at least 6 characters long"),
+
+    body("confirmPassword")
+        .custom((value, { req }) => {
+            if (!value || value !== req.body.password) {
+                throw new Error("Password does not match");
+            }
+            return true;
+        }),
 ];

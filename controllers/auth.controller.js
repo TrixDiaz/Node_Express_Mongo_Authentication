@@ -7,14 +7,29 @@ import transporter from "../config/nodemailer.js";
 export const signUp = async (req, res, next) => {
     try {
         // Logic to create a new user
-        const {name, email, password} = req.body;
+        const {name, email, password, confirmPassword} = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({email: email});
 
+        // Check for missing confirmPassword specifically
+        if (!confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: "Confirm password is empty"
+            });
+        }
+        // If user already exists, return an error
         if (existingUser) {
             const error = new Error("User already exists");
             error.statusCode = 409;
+            return next(error);
+        }
+
+        // Validate password and confirmPassword
+        if (password !== confirmPassword) {
+            const error = new Error("Passwords do not match");
+            error.statusCode = 400;
             return next(error);
         }
 

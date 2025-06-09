@@ -8,7 +8,7 @@ import {
     updateUserPassword,
 } from "../controllers/user.controller.js";
 import authorize from "../middlewares/auth.middleware.js";
-import validateRequest from "../validators/validateRequest.js";
+import {validateRequest} from "../validators/validateRequest.js";
 import {
     createUserValidator,
     updateUserValidator,
