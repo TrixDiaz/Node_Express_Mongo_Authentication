@@ -217,6 +217,7 @@ Authorization: Bearer jwt_token_here
 
 ### Rate Limiting
 - Request attempts: 5 attempts per 30 seconds
+- Login attempts: 5 attempts before locked account
 
 ### Input Validation
 - Email format validation

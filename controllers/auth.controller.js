@@ -88,7 +88,7 @@ export const signIn = async (req, res, next) => {
             user.loginAttempts = (user.loginAttempts || 0) + 1;
 
             // Check if attempts exceed limit
-            if (user.loginAttempts >= 3) {
+            if (user.loginAttempts >= 5) {
                 user.isLocked = true;
                 await user.save();
                 const error = new Error("Account locked due to multiple failed attempts. Please contact administrator");
@@ -99,7 +99,7 @@ export const signIn = async (req, res, next) => {
             // Save the incremented attempts
             await user.save();
 
-            const error = new Error(`Invalid password. ${3 - user.loginAttempts} attempts remaining`);
+            const error = new Error(`Invalid password. ${5  - user.loginAttempts} attempts remaining`);
             error.statusCode = 401;
             return next(error);
         }
